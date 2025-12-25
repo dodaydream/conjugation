@@ -41,8 +41,12 @@
         <div class="flex-1 h-full w-full">
          <div v-for="voice in voiceSections" :key="voice.key" class="h-full w-full">
           <UScrollArea :ui="{ root: 'w-full h-full flex justify-center items-center', viewport: 'w-full' }" orientation="horizontal">
-            <IndicativeTimeline v-if="indicatifTimeline(voice).length" :items="indicatifTimeline(voice)"
-              :format-label="formatLabel"/>
+            <IndicativeTimeline
+              v-if="indicatifTimeline(voice).length"
+              :items="indicatifTimeline(voice)"
+              :format-label="formatLabel"
+              :highlight-term="normalizedQuery"
+            />
           </UScrollArea>
         </div>
         </div>

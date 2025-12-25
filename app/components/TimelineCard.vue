@@ -22,7 +22,15 @@
           <span v-if="form.label" class="font-medium text-gray-500 dark:text-gray-400">
             {{ form.label }}
           </span>
-          <span>{{ form.value }}</span>
+          <span>
+            <span
+              v-for="(part, partIndex) in getHighlightedParts(form.value)"
+              :key="`${form.label}-${partIndex}`"
+              :class="part.isMatch ? 'font-semibold text-green-600 dark:text-green-400' : ''"
+            >
+              {{ part.text }}
+            </span>
+          </span>
         </li>
       </ul>
     </div>
@@ -40,8 +48,46 @@ type TimelineItem = {
   }>;
 };
 
-defineProps<{
+import { computed } from 'vue';
+
+const props = defineProps<{
   item: TimelineItem;
   formatLabel: (label: string) => string;
+  highlightTerm: string;
 }>();
+
+const normalizedHighlight = computed(() => props.highlightTerm.trim().toLowerCase());
+
+const getHighlightedParts = (value: string) => {
+  const term = normalizedHighlight.value;
+
+  if (!term) {
+    return [{ text: value, isMatch: false }];
+  }
+
+  const lowerValue = value.toLowerCase();
+  const parts: Array<{ text: string; isMatch: boolean }> = [];
+  let startIndex = 0;
+  let matchIndex = lowerValue.indexOf(term);
+
+  if (matchIndex === -1) {
+    return [{ text: value, isMatch: false }];
+  }
+
+  while (matchIndex !== -1) {
+    if (matchIndex > startIndex) {
+      parts.push({ text: value.slice(startIndex, matchIndex), isMatch: false });
+    }
+
+    parts.push({ text: value.slice(matchIndex, matchIndex + term.length), isMatch: true });
+    startIndex = matchIndex + term.length;
+    matchIndex = lowerValue.indexOf(term, startIndex);
+  }
+
+  if (startIndex < value.length) {
+    parts.push({ text: value.slice(startIndex), isMatch: false });
+  }
+
+  return parts;
+};
 </script>
