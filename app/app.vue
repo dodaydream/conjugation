@@ -5,6 +5,23 @@
         <UInput id="verb-search" v-model="query" icon="i-heroicons-magnifying-glass" size="lg"
           placeholder="Start typing a verb..." autocomplete="off" class="relative z-10 w-full"
           @keydown.tab.prevent="acceptSuggestion" @keydown.enter.prevent="acceptSuggestion" />
+        <div
+          v-if="showCandidates"
+          class="absolute left-0 right-0 mt-2 rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900"
+        >
+          <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+            <li v-for="candidate in candidates" :key="candidate.verb">
+              <button
+                type="button"
+                class="flex w-full items-center justify-between px-4 py-3 text-left text-sm text-gray-900 hover:bg-gray-50 dark:text-white dark:hover:bg-gray-800"
+                @mousedown.prevent
+                @click="selectCandidate(candidate.verb)"
+              >
+                <span>{{ candidate.verb }}</span>
+              </button>
+            </li>
+          </ul>
+        </div>
       </div>
     </section>
 
@@ -35,11 +52,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import IndicativeTimeline from './components/IndicativeTimeline.vue';
-import { findVerbEntry } from './repositories/verbRepository';
+import { findVerbEntry, type VerbCandidate, searchVerbCandidates } from './repositories/verbRepository';
 
 const query = ref('');
 const currentCandidate = ref<Awaited<ReturnType<typeof findVerbEntry>> | null>(null);
 const isLoading = ref(false);
+const candidates = ref<VerbCandidate[]>([]);
 
 const normalizedQuery = computed(() => query.value.trim().toLowerCase());
 
@@ -48,12 +66,18 @@ watch(
   async (value) => {
     if (!value) {
       currentCandidate.value = null;
+      candidates.value = [];
       return;
     }
 
     isLoading.value = true;
     try {
-      currentCandidate.value = await findVerbEntry(value);
+      const [entry, list] = await Promise.all([
+        findVerbEntry(value),
+        searchVerbCandidates(value),
+      ]);
+      currentCandidate.value = entry;
+      candidates.value = list;
     } finally {
       isLoading.value = false;
     }
@@ -84,6 +108,12 @@ const acceptSuggestion = () => {
     query.value = suggestion.value;
   }
 };
+
+const selectCandidate = (verb: string) => {
+  query.value = verb;
+};
+
+const showCandidates = computed(() => normalizedQuery.value && candidates.value.length > 0);
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);

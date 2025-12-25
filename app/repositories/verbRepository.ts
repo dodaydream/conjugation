@@ -9,6 +9,11 @@ type VerbSearchResult = {
   score?: number;
 };
 
+export type VerbCandidate = {
+  verb: string;
+  score?: number;
+};
+
 let verbDictionaryPromise: Promise<VerbDictionary> | null = null;
 let fusePromise: Promise<Fuse<string>> | null = null;
 let verbFormIndexPromise: Promise<Map<string, string>> | null = null;
@@ -119,6 +124,47 @@ export const findVerbEntry = async (query: string): Promise<VerbSearchResult | n
   }
 
   return { verb: bestMatch.item, entry, score: bestMatch.score };
+};
+
+export const searchVerbCandidates = async (
+  query: string,
+  limit = 8
+): Promise<VerbCandidate[]> => {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery || limit <= 0) {
+    return [];
+  }
+
+  const dictionary = await loadVerbDictionary();
+  const results: VerbCandidate[] = [];
+  const seen = new Set<string>();
+
+  const addCandidate = (verb: string, score?: number) => {
+    if (!verb || seen.has(verb) || !dictionary[verb]) {
+      return;
+    }
+
+    seen.add(verb);
+    results.push({ verb, score });
+  };
+
+  addCandidate(normalizedQuery);
+
+  const formIndex = await loadVerbFormIndex();
+  const matchedVerb = formIndex.get(normalizedQuery);
+
+  if (matchedVerb) {
+    addCandidate(matchedVerb);
+  }
+
+  const fuse = await loadFuse();
+  const remaining = Math.max(limit - results.length, 0);
+  const matches = remaining ? fuse.search(normalizedQuery, { limit: remaining }) : [];
+
+  matches.forEach((match) => addCandidate(match.item, match.score));
+
+  return results.slice(0, limit);
 };
 
 export const getVerbEntry = async (verb: string): Promise<VerbEntry | null> => {
