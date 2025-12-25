@@ -4,7 +4,9 @@
       <div class="relative">
         <UInput id="verb-search" v-model="query" icon="i-heroicons-magnifying-glass" size="lg"
           placeholder="Start typing a verb..." autocomplete="off" class="relative z-10 w-full"
-          @keydown.tab.prevent="acceptSuggestion" @keydown.enter.prevent="acceptSuggestion" />
+          @keydown="handleKeydown"
+          @keydown.tab.prevent="acceptSuggestion"
+          @keydown.enter.prevent="acceptSuggestion" />
         <div
           v-if="showCandidates"
           class="absolute left-0 right-0 mt-2 rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900"
@@ -58,6 +60,7 @@ const query = ref('');
 const currentCandidate = ref<Awaited<ReturnType<typeof findVerbEntry>> | null>(null);
 const isLoading = ref(false);
 const candidates = ref<VerbCandidate[]>([]);
+const suppressCandidates = ref(false);
 
 const normalizedQuery = computed(() => query.value.trim().toLowerCase());
 
@@ -104,16 +107,26 @@ const suggestionRemainder = computed(() => {
 });
 
 const acceptSuggestion = () => {
+  suppressCandidates.value = true;
   if (suggestion.value) {
     query.value = suggestion.value;
   }
 };
 
 const selectCandidate = (verb: string) => {
+  suppressCandidates.value = true;
   query.value = verb;
 };
 
-const showCandidates = computed(() => normalizedQuery.value && candidates.value.length > 0);
+const handleKeydown = (event: KeyboardEvent) => {
+  if (event.key !== 'Enter' && event.key !== 'Tab') {
+    suppressCandidates.value = false;
+  }
+};
+
+const showCandidates = computed(
+  () => normalizedQuery.value && candidates.value.length > 0 && !suppressCandidates.value
+);
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
