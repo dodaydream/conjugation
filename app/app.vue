@@ -55,45 +55,49 @@
             {{ formatLabel(voice.key) }}
           </h3>
           <div
-            v-if="indicatifTimelineCards(voice).length"
+            v-if="indicatifTimeline(voice).length"
             class="rounded-lg border border-gray-200 bg-white/60 p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900/40"
           >
-            <div class="flex flex-col gap-4">
+            <div class="flex flex-col gap-3">
               <div>
                 <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">Indicative timeline</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">
-                  Each point shows matching forms across sections for the same tense.
+                  Scroll horizontally to explore all tenses at a glance.
                 </p>
               </div>
-              <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <UCard v-for="item in indicatifTimelineCards(voice)" :key="item.key" class="space-y-2">
-                  <div class="flex items-center gap-2">
-                    <span class="h-2.5 w-2.5 rounded-full bg-primary-500 ring-4 ring-primary-100 dark:ring-primary-950"></span>
-                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
-                      {{ item.label }}
-                    </p>
+              <div class="relative overflow-hidden">
+                <div class="absolute inset-x-0 top-5 h-px bg-gray-200 dark:bg-gray-700"></div>
+                <div class="flex gap-4 overflow-x-auto pb-2">
+                  <div
+                    v-for="item in indicatifTimeline(voice)"
+                    :key="item.key"
+                    class="relative flex w-44 flex-none flex-col gap-2 rounded-lg border border-gray-200 bg-white p-3 text-left shadow-sm dark:border-gray-700 dark:bg-gray-900"
+                  >
+                    <div class="flex items-center gap-2">
+                      <span class="h-2.5 w-2.5 rounded-full bg-primary-500 ring-4 ring-primary-100 dark:ring-primary-950"></span>
+                      <p class="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                        {{ item.label }}
+                      </p>
+                    </div>
+                    <div v-for="section in item.sections" :key="section.key" class="space-y-1">
+                      <p class="text-[0.7rem] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        {{ formatLabel(section.key) }}
+                      </p>
+                      <ul class="space-y-0.5 text-xs text-gray-700 dark:text-gray-200">
+                        <li
+                          v-for="form in section.forms"
+                          :key="form.label + form.value"
+                          class="grid grid-cols-[minmax(2.5rem,3.5rem)_1fr] gap-2"
+                        >
+                          <span v-if="form.label" class="font-medium text-gray-500 dark:text-gray-400">
+                            {{ form.label }}
+                          </span>
+                          <span>{{ form.value }}</span>
+                        </li>
+                      </ul>
+                    </div>
                   </div>
-                  <p v-if="item.auxiliary" class="text-xs font-medium text-gray-500 dark:text-gray-400">
-                    {{ item.auxiliary }}
-                  </p>
-                  <div v-for="section in item.sections" :key="section.key" class="space-y-1">
-                    <p class="text-[0.7rem] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                      {{ formatLabel(section.key) }}
-                    </p>
-                    <ul class="space-y-0.5 text-xs text-gray-700 dark:text-gray-200">
-                      <li
-                        v-for="form in section.forms"
-                        :key="form.label + form.value"
-                        class="grid grid-cols-[minmax(2.5rem,3.5rem)_1fr] gap-2"
-                      >
-                        <span v-if="form.label" class="font-medium text-gray-500 dark:text-gray-400">
-                          {{ form.label }}
-                        </span>
-                        <span>{{ form.value }}</span>
-                      </li>
-                    </ul>
-                  </div>
-                </UCard>
+                </div>
               </div>
             </div>
           </div>
@@ -264,26 +268,13 @@ const indicatifTimelineLabels: Record<string, string> = {
   futur_anterieur: 'Futur antérieur',
 };
 
-const auxiliaryLabel = (voiceKey: string) => {
-  const parts = voiceKey.split('_');
-  const candidate = parts.at(-1);
-
-  if (candidate === 'avoir' || candidate === 'etre') {
-    return candidate;
-  }
-
-  return '';
-};
-
-const indicatifTimelineCards = (voice: {
+const indicatifTimeline = (voice: {
   key: string;
   sections: Array<{
     key: string;
     tenses: Array<{ key: string; forms: Array<{ label: string; value: string }> }>;
   }>;
 }) => {
-  const auxiliary = auxiliaryLabel(voice.key);
-
   return indicatifTimelineOrder
     .map((tenseKey) => {
       const sections = voice.sections
@@ -310,12 +301,11 @@ const indicatifTimelineCards = (voice: {
       return {
         key: tenseKey,
         label: indicatifTimelineLabels[tenseKey] ?? formatLabel(tenseKey),
-        auxiliary,
         sections,
       };
     })
     .filter(
-      (item): item is { key: string; label: string; auxiliary: string; sections: Array<{ key: string; forms: Array<{ label: string; value: string }> }> } =>
+      (item): item is { key: string; label: string; sections: Array<{ key: string; forms: Array<{ label: string; value: string }> }> } =>
         Boolean(item)
     );
 };
